@@ -153,16 +153,18 @@ model_REE <- lmer(
 )
 
 tidy(model_REE, effects = "fixed", conf.int = TRUE) %>%
-  kable("html", digits = 3, caption = "Fixed Effects for REE Mixed Model") %>%
+  kable("latex", digits = 3, caption = "Fixed Effects for REE Mixed Model") %>%
   kable_styling(full_width = FALSE)
 ```
 
 ```{r label = "mod2", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model vs. Model without Obesity", fig.show = 'hold'}
 
+model_REE_noObese <- lmer(REE ~ Ventilator + ICUorSDU + (1|ID), data = REE)
+
 kr <- pbkrtest::KRmodcomp(model_REE, model_REE_noObese)
 
 broom::tidy(kr) %>%
-  kable("html",
+  kable("latex",
         digits = 4,
         caption = "Kenward–Roger Test Comparing Full Model vs. Model without Obesity") %>%
   kable_styling(full_width = FALSE)
