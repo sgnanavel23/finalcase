@@ -7,3 +7,124 @@ output:
     number_sections: true
     toc: false
 ---
+
+```{r echo = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(lme4)
+library(lmerTest)   # p-values for lmer
+library(ggplot2)
+library(performance)  # for check_model()
+library(lattice)
+
+# Load data
+load("REE.RData")
+
+# Check structure
+str(REE)
+summary(REE)
+
+```
+
+```{r}
+# Convert appropriate variables to factors
+REE <- REE %>%
+  mutate(
+    ID = factor(ID),
+    Measurement = factor(Measurement),
+    Obese = factor(Obese, levels = c(0,1), labels = c("Non-Obese", "Obese")),
+    Ventilator = factor(Ventilator, levels = c(0,1), labels = c("NoVent", "Vent")),
+    ICUorSDU = factor(ICUorSDU, levels = c(0,1), labels = c("SDU","ICU"))
+  )
+
+```
+
+```{r}
+p1 <- ggplot(REE, aes(x = REE)) +
+  geom_histogram(bins = 20, fill = "#4E79A7", color = "white") +
+  labs(title = "Distribution of REE", x = "Resting Energy Expenditure")
+
+p2 <- ggplot(REE, aes(x = REEperKG)) +
+  geom_histogram(bins = 20, fill = "#F28E2B", color = "white") +
+  labs(title = "Distribution of REE per KG", x = "REE per KG")
+
+p1; p2
+
+
+```
+
+```{r}
+# Shows within-patient correlation and between-patient variability
+ggplot(REE, aes(x = Measurement, y = REE, group = ID, color = Obese)) +
+  geom_line(alpha = 0.7) +
+  geom_point(size = 2) +
+  labs(title = "REE Trajectories by Patient")
+```
+
+```{r}
+# Patient means vs. grand mean
+patient_means <- REE %>% group_by(ID) %>% summarise(mean_REE = mean(REE))
+ggplot(patient_means, aes(x = reorder(ID, mean_REE), y = mean_REE)) +
+  geom_point(size = 3) +
+  geom_hline(yintercept = mean(REE$REE), linetype = "dashed", color = "red") +
+  labs(title = "Patient-Specific Mean REE", x = "Patient ID", y = "Mean REE")
+```
+
+```{r}
+ggplot(REE, aes(x = Obese, y = REE, fill = Obese)) +
+  geom_boxplot(alpha = 0.8) +
+  labs(title = "REE by Obesity Status", x = "", y = "REE")
+
+ggplot(REE, aes(x = Obese, y = REEperKG, fill = Obese)) +
+  geom_boxplot(alpha = 0.8) +
+  labs(title = "REE per KG by Obesity Status", x = "", y = "REE per KG")
+
+```
+
+```{r}
+ggplot(REE, aes(Ventilator, REE, fill = Ventilator)) +
+  geom_boxplot(alpha = 0.8) +
+  labs(title = "REE by Ventilator Status", y = "REE")
+
+```
+
+```{r}
+ggplot(REE, aes(x = as.numeric(Measurement), y = REE, group = ID, color = ID)) +
+  geom_line() + geom_point() +
+  labs(title = "Individual REE Trajectories Over Time",
+       x = "Measurement Number", y = "REE") +
+  theme(legend.position = "none")
+
+```
+
+```{r}
+ggplot(REE, aes(BMI, REE)) +
+  geom_point(alpha = 0.7) + geom_smooth(method = "loess") +
+  labs(title = "REE vs BMI")
+
+ggplot(REE, aes(BMI, REEperKG)) +
+  geom_point(alpha = 0.7) + geom_smooth(method = "loess") +
+  labs(title = "REE per KG vs BMI")
+
+```
+
+# Background
+
+## The Data
+
+# Exploratory Data Analysis
+
+# Model rationale
+
+### NLME Model: Implementation, Evaluation, and Results
+
+# **Bayesian Model: Rationale, Implementation, and Evaluation**
+
+# Model results
+
+# Shortcomings and Future Work
+
+# Conclusion
+
+\newpage
+
+# Appendix
