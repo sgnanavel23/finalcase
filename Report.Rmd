@@ -35,6 +35,8 @@ Including BMI in the mixed-effects models was not appropriate because BMI does n
 
 A full set of diagnostic checks confirmed that the mixed-effects models were reasonably well-specified. The Residuals vs Fitted plots for both REE and REE/kg showed centered residuals with only mild heteroskedasticity at higher fitted values. Normal Q–Q plots of residuals exhibited approximate normality with some tail deviation expected from the small sample size, and random-intercept Q–Q plots demonstrated that the patient-specific effects were approximately normally distributed. Observed vs fitted plots showed that the models captured meaningful variation in the outcomes, and posterior predictive density overlays indicated that the REE model in particular reproduced the empirical distribution well. No major anomalies or assumption violations were detected. Overall, diagnostics supported the adequacy of the chosen modeling framework for both REE and REE/kg.
 
+Model fit statistics were reported only for the full REE and REE/kg mixed models used for inference. For the REE model, the marginal R² (0.456) indicated that the fixed effects explained approximately 46% of the variability in REE, while the conditional R² (0.544) showed that including patient-specific random intercepts increased the explained variance to 54% (Figure @ref(fig:ree)). The adjusted ICC (0.163) suggested modest between-patient differences in baseline REE (Figure @ref(fig:ree)). Consistent with the lack of significant predictors, the REE/kg model showed substantially lower marginal and conditional R² values and a small ICC, reflecting minimal explainable structure in weight-adjusted metabolic rate (Figure @ref(fig:reekg)). This relatively low ICC is expected in metabolic data, where REE varies markedly over short time intervals due to clinical and physiological dynamics. These results support the use of a random-intercept structure while also indicating that within-patient variability remains the dominant source of variation in the dataset.
+
 No major anomalies were evident in the data, although a few minor issues were noted. A small number of patients exhibited unusually high REE values (e.g., \>2400 kcal/day), which contributed to increased random-effect variance but did not act as influential outliers. Additionally, mild heteroskedasticity and slight tail deviations were visible in the residual diagnostics, but these patterns are expected given the small sample size and do not indicate serious assumption violations. The strongest structural limitation was the temporal confounding between clinical variables and measurement order, as most “ICU” and “Ventilator” observations occurred early in recovery. However, this reflects the study design rather than data anomalies, and the mixed-effects framework handled this imbalance reasonably well. Overall, no irregularities were detected that would invalidate the modeling approach or materially distort the conclusions.
 
 # Model results
@@ -63,6 +65,7 @@ library(lattice)
 library(pbkrtest)
 library(kableExtra)
 library(broom.mixed)
+library(performance)
 # Load data
 load("REE.RData")
 ```
@@ -317,15 +320,45 @@ ggplot(REE, aes(x = fitted_kg, y = REEperKG, color = ID)) +
 
 ```
 
-```{r}
-library(performance)
+```{r label = "ree", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "R^2 & ICC values for the full REE model", fig.show = 'hold'}
 
-r2 <- performance::r2(model_REE)
-r2
+r2_vals  <- performance::r2(model_REE)
+icc_vals <- performance::icc(model_REE)
+
+fit_stats <- data.frame(
+  Metric = c("Marginal R²", "Conditional R²", "Adjusted ICC", "Unadjusted ICC"),
+  Value  = c(r2_vals$R2_marginal,
+             r2_vals$R2_conditional,
+             icc_vals$ICC_adjusted,
+             icc_vals$ICC_unadjusted)
+)
+
+kable(fit_stats, 
+      format = "latex",
+      digits = 3,
+      caption = "Model Fit Statistics for Full REE Mixed Model",
+      booktabs = TRUE) %>%
+  kable_styling(latex_options = "hold_position")
 ```
 
-```{r}
-icc(model_REE)
+```{r label = "reekg", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "ICC values for the full REE/kg model", fig.show = 'hold'}
+
+r2_vals  <- performance::r2(model_REEkg)
+icc_vals <- performance::icc(model_REEkg)
+
+fit_stats <- data.frame(
+  Metric = c("Marginal R²", "Conditional R²", "Adjusted ICC", "Unadjusted ICC"),
+  Value  = c(r2_vals$R2_marginal,
+             r2_vals$R2_conditional,
+             icc_vals$ICC_adjusted,
+             icc_vals$ICC_unadjusted)
+)
+
+kable(fit_stats, 
+      format = "latex",
+      digits = 3,
+      caption = "Model Fit Statistics for Full REE/kg Mixed Model",
+      booktabs = TRUE) %>%
+  kable_styling(latex_options = "hold_position")
+
 ```
-
-
