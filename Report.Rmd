@@ -39,11 +39,43 @@ Model fit statistics were reported only for the full REE and REE/kg mixed models
 
 No major anomalies were evident in the data, although a few minor issues were noted. A small number of patients exhibited unusually high REE values (e.g., \>2400 kcal/day), which contributed to increased random-effect variance but did not act as influential outliers. Additionally, mild heteroskedasticity and slight tail deviations were visible in the residual diagnostics, but these patterns are expected given the small sample size and do not indicate serious assumption violations. The strongest structural limitation was the temporal confounding between clinical variables and measurement order, as most “ICU” and “Ventilator” observations occurred early in recovery. However, this reflects the study design rather than data anomalies, and the mixed-effects framework handled this imbalance reasonably well. Overall, no irregularities were detected that would invalidate the modeling approach or materially distort the conclusions.
 
+$$
+\text{REE}_{ij}
+=
+\beta_0
++ \beta_{\text{Obese}} \, \text{Obese}_{ij}
++ \beta_{\text{Vent}} \, \text{Vent}_{ij}
++ \beta_{\text{Loc}} \, \text{ICU/SDU}_{ij}
++ b_{0i}
++ \varepsilon_{ij},
+$$
+
+$$
+b_{0i} \sim N(0, \sigma_b^2), \qquad 
+\varepsilon_{ij} \sim N(0, \sigma^2).
+$$
+
+$$
+\text{REE/kg}_{ij}
+=
+\beta_0
++ \beta_{\text{Obese}} \, \text{Obese}_{ij}
++ \beta_{\text{Vent}} \, \text{Vent}_{ij}
++ \beta_{\text{Loc}} \, \text{ICU/SDU}_{ij}
++ b_{0i}
++ \varepsilon_{ij},
+$$
+
+$$
+b_{0i} \sim N(0, \sigma_b^2), \qquad 
+\varepsilon_{ij} \sim N(0, \sigma^2).
+$$
+
 # Model results
 
 The mixed-effects model for REE revealed that obesity status and ventilator use were meaningful predictors of total metabolic expenditure. Obese patients exhibited approximately 488 kcal/day higher REE than non-obese patients (p = 0.011), consistent with exploratory patterns (Table @ref(tab:mod1)). Ventilated patients showed an estimated 340 kcal/day reduction in REE (p = 0.048), reflecting lower metabolic demand under mechanical ventilation (Table @ref(tab:mod1)). ICU vs SDU location demonstrated no detectable association with REE (p = 0.564) (Table @ref(tab:mod1)). Kenward–Roger tests confirmed these findings: removing obesity significantly worsened model fit (p = 0.009), while removing ventilator status produced borderline evidence of loss of fit (p = 0.065), and removing location had no effect (p = 0.58) (Table @ref(tab:mod2)) (Table @ref(tab:mod3)) (Table @ref(tab:mod4)). When REE was weight-adjusted, the conclusions changed substantially. In the REE/kg model, none of the predictors were significant, and no nested model comparison indicated loss of fit, consistent with the strong overlap seen in the REE per KG by Obesity Status plot (Table @ref(tab:mod10)). Thus, obesity and ventilator status meaningfully affect total energy expenditure but not energy expenditure per kilogram, indicating that differences in REE are driven by body size rather than intrinsic metabolic rate (Table @ref(tab:mod11)) (Table @ref(tab:mod12)) (Table @ref(tab:mod13)).
 
-In summary, the modeling objectives were fully achieved. Using a properly diagnosed mixed-effects framework, we characterized how REE depends on obesity, ventilator use, and location. I also demonstrated that these conclusions change when REE is weight-adjusted, and verified through residual, random-effect, and predictive diagnostics that the models fit the data appropriately. The final results show that obesity and ventilator status meaningfully affect total REE, but do not influence REE/kg, highlighting that metabolic rate per unit mass is stable across patient groups.
+In summary, the modeling objectives were fully achieved. Using a properly diagnosed mixed-effects framework, we characterized how REE depends on obesity, ventilator use, and location. I also demonstrated that these conclusions change when REE is weight-adjusted, and verified through residual, random-effect, and predictive diagnostics that the models fit the data appropriately. The final results show that clinically meaningful differences in metabolic demand arise from obesity and ventilator status, but these differences disappear when adjusting for body weight.
 
 # Shortcomings and Conclusion
 
@@ -360,5 +392,43 @@ kable(fit_stats,
       caption = "Model Fit Statistics for Full REE/kg Mixed Model",
       booktabs = TRUE) %>%
   kable_styling(latex_options = "hold_position")
+
+```
+
+```{r}
+library(tidyverse)
+
+# build two clean plotting datasets
+df_REE <- REE %>%
+  mutate(
+    Fitted = fitted(model_REE),
+    Observed = REE,
+    Model = "REE"
+  ) %>%
+  select(Fitted, Observed, ID, Model)
+
+df_REEkg <- REE %>%
+  mutate(
+    Fitted = fitted(model_REEkg),
+    Observed = REEperKG,
+    Model = "REE/kg"
+  ) %>%
+  select(Fitted, Observed, ID, Model)
+
+# combine
+df_plot <- bind_rows(df_REE, df_REEkg)
+
+# final combined plot
+ggplot(df_plot, aes(x = Fitted, y = Observed, color = ID)) +
+  geom_point(alpha = 0.75, size = 2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", size = 1) +
+  facet_wrap(~ Model, scales = "free") +
+  labs(
+    title = "Observed vs Fitted Values",
+    x = "Fitted",
+    y = "Observed"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
 
 ```
