@@ -14,7 +14,7 @@ Accurately assessing postoperative metabolic needs is critical for optimizing nu
 
 # Exploratory Data Analysis
 
-To understand patterns in postoperative metabolic demand and to guide the structure of my final model, I first conducted a detailed exploratory analysis of REE and REE/kg across patients and clinical factors. The distributions of the two outcome variables (Figure @ref(fig:eda1)) and (Figure @ref(fig:eda2)) show substantial heterogeneity, with REE moderately right-skewed and REE/kg more symmetric. This distinction suggests that absolute REE is strongly influenced by body size, while REE/kg provides a more standardized measure of metabolic intensity. The differences in distributional shape motivate analyzing both outcomes in parallel.
+To understand patterns in postoperative metabolic demand and to guide the structure of my final model, I first conducted a detailed exploratory analysis of REE and REE/kg across patients and clinical factors. The distributions of the two outcome variables (Figure @ref(fig:eda1)) and (Figure @ref(fig:eda2)) show substantial heterogeneity, with REE moderately right-skewed and REE/kg more symmetric. This distinction suggests that absolute REE is strongly influenced by body size, while REE/kg provides a more standardized measure of metabolic intensity. The differences in distributional shape help continue analyzing both outcomes in parallel.
 
 A key feature of the dataset is its repeated-measures structure. The REE Trajectories by Patient plot ((Figure @ref(fig:eda3)) displays considerable within-patient correlation and highly individualized recovery profiles, with some patients showing rising REE over time while others decline or fluctuate. The Patient-Specific Mean REE plot (Figure @ref(fig:eda4)) further highlights large between-patient differences in average metabolic demand. Together, these figures provide strong justification for a mixed-effects model with patient-level random intercepts, as failing to account for this structure would underestimate variability and bias inference.
 
@@ -147,7 +147,7 @@ ggplot(REE, aes(BMI, REEperKG)) +
   labs(title = "REE per KG vs BMI")
 ```
 
-### Modeling: 
+### Modeling:
 
 ```{r label = "mod1", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Fixed Effects for REE Mixed Model", fig.show = 'hold'}
 
@@ -170,40 +170,61 @@ kr <- pbkrtest::KRmodcomp(model_REE, model_REE_noObese)
 broom::tidy(kr) %>%
   kable("latex",
         digits = 4,
-        caption = "Kenward–Roger Test Comparing Full Model vs. Model without Obesity") %>%
+        caption = "Kenward–Roger Test Comparing Full Model REE vs. Model without Obesity") %>%
   kable_styling(full_width = FALSE)
 ```
 
-```{r}
+```{r label = "mod3", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model vs. Model without Ventilator", fig.show = 'hold'}
+
 model_REE_noVent <- lmer(REE ~ Obese + ICUorSDU + (1|ID), data = REE)
-pbkrtest::KRmodcomp(model_REE, model_REE_noVent)
+kr <- pbkrtest::KRmodcomp(model_REE, model_REE_noObese)
+
+broom::tidy(kr) %>%
+  kable("latex",
+        digits = 4,
+        caption = "Kenward–Roger Test Comparing Full Model REE vs. Model without Ventilator") %>%
+  kable_styling(full_width = FALSE)
 ```
 
-```{r}
+```{r label = "mod4", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model vs. Model without ICU/SDU", fig.show = 'hold'}
+
 model_REE_noLoc <- lmer(REE ~ Obese + Ventilator + (1|ID), data = REE)
-pbkrtest::KRmodcomp(model_REE, model_REE_noLoc)
+kr <- pbkrtest::KRmodcomp(model_REE, model_REE_noObese)
+
+broom::tidy(kr) %>%
+  kable("latex",
+        digits = 4,
+        caption = "Kenward–Roger Test Comparing Full Model REE vs. Model without ICU/SDU") %>%
+  kable_styling(full_width = FALSE)
 ```
 
-```{r}
+```{r label = "mod5", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Residuals vs Fitted Plot for full REE model", fig.show = 'hold'}
+
 par(mfrow=c(1,2))
 plot(model_REE, which=1)  # residuals vs fitted
-qqnorm(resid(model_REE)); qqline(resid(model_REE))
-par(mfrow=c(1,1))
-
 ```
 
-```{r}
+```{r label = "mod6", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Normal QQ Plot for full REE model", fig.show = 'hold'}
+
+qqnorm(resid(model_REE)); qqline(resid(model_REE))
+par(mfrow=c(1,1))
+```
+
+```{r label = "mod7", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Random Intercept QQ Plot for full REE model", fig.show = 'hold'}
+
 qqnorm(ranef(model_REE)$ID[,1], main="Random Intercept QQ Plot")
 qqline(ranef(model_REE)$ID[,1])
 
 ```
 
-```{r}
+```{r label = "mod8", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model vs. Model without ICU/SDU", fig.show = 'hold'}
+
 check_model(model_REE)
 
 ```
 
-```{r}
+```{r label = "mod9", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Observed vs Fitted REE by Patient ID", fig.show = 'hold'}
+
 REE$fitted <- fitted(model_REE)
 
 ggplot(REE, aes(x = fitted, y = REE, color = ID)) +
@@ -214,48 +235,78 @@ ggplot(REE, aes(x = fitted, y = REE, color = ID)) +
 
 ```
 
-```{r}
+```{r label = "mod10", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Fixed Effects for REE by KG Mixed Model", fig.show = 'hold'}
+
 model_REEkg <- lmer(
   REEperKG ~ Obese + Ventilator + ICUorSDU + (1 | ID),
   data = REE
 )
 
-summary(model_REEkg)
+tidy(model_REEkg, effects = "fixed", conf.int = TRUE) %>%
+  kable("latex", digits = 3, caption = "Fixed Effects for REE/kg Mixed Model") %>%
+  kable_styling(full_width = FALSE)
 
 ```
 
-```{r}
+```{r label = "mod11", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model REEkg vs. Model without Obesity", fig.show = 'hold'}
+
 model_REEkg_noObese <- lmer(REEperKG ~ Ventilator + ICUorSDU + (1|ID), data = REE)
-pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noObese)
 
+kr <- pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noObese)
+
+broom::tidy(kr) %>%
+  kable("latex",
+        digits = 4,
+        caption = "Kenward–Roger Test Comparing Full Model REE/kg vs. Model without Obesity") %>%
+  kable_styling(full_width = FALSE)
 ```
 
-```{r}
+```{r label = "mod12", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model REEkg vs. Model without Ventilator", fig.show = 'hold'}
+
 model_REEkg_noVent <- lmer(REEperKG ~ Obese + ICUorSDU + (1|ID), data = REE)
-pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noVent)
 
+kr <- pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noVent)
+
+broom::tidy(kr) %>%
+  kable("latex",
+        digits = 4,
+        caption = "Kenward–Roger Test Comparing Full Model REE/kg vs. Model without Ventilator") %>%
+  kable_styling(full_width = FALSE)
 ```
 
-```{r}
+```{r label = "mod13", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model REEkg vs. Model without ICU/SDU", fig.show = 'hold'}
+
 model_REEkg_noLoc <- lmer(REEperKG ~ Obese + Ventilator + (1|ID), data = REE)
-pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noLoc)
 
+kr <- pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noLoc)
+
+broom::tidy(kr) %>%
+  kable("latex",
+        digits = 4,
+        caption = "Kenward–Roger Test Comparing Full Model REE/kg vs. Model without ICU/SDU") %>%
+  kable_styling(full_width = FALSE)
 ```
 
-```{r}
+```{r label = "mod14", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Residual Plot for REE per KG model", fig.show = 'hold'}
+
 par(mfrow=c(1,2))
 plot(model_REEkg, which=1)
+```
+
+```{r label = "mod15", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "QQ Plot for REE per KG model", fig.show = 'hold'}
+
 qqnorm(resid(model_REEkg)); qqline(resid(model_REEkg))
 par(mfrow=c(1,1))
+```
+
+```{r label = "mod16", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Random Intercept QQ Plot for REE per KG model", fig.show = 'hold'}
 
 qqnorm(ranef(model_REEkg)$ID[,1], main="Random Intercept QQ Plot (REE/kg)")
 qqline(ranef(model_REEkg)$ID[,1])
-
-check_model(model_REEkg)
-
 ```
 
-```{r}
+```{r label = "mod17", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "bserved vs Fitted REE per KG by Patient ID", fig.show = 'hold'}
+
 REE$fitted_kg <- fitted(model_REEkg)
 
 ggplot(REE, aes(x = fitted_kg, y = REEperKG, color = ID)) +
@@ -265,3 +316,16 @@ ggplot(REE, aes(x = fitted_kg, y = REEperKG, color = ID)) +
   theme(legend.position = "none")
 
 ```
+
+```{r}
+library(performance)
+
+r2 <- performance::r2(model_REE)
+r2
+```
+
+```{r}
+icc(model_REE)
+```
+
+
