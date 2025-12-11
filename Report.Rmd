@@ -24,22 +24,16 @@ I also explored clinical covariates thought to influence metabolic rate. The box
 
 Taken together, the exploratory analysis shows that an appropriate modeling strategy must:\
 (1) incorporate patient-level random effects due to strong within-patient correlation (Figure @ref(fig:eda3)) and (Figure @ref(fig:eda4)),\
-(2) include Obesity, BMI, and Ventilator status as fixed effects due to their clear associations with REE (Figures 5–9), and\
+(2) include Obesity and Ventilator status as fixed effects due to their clear associations with REE (Figures 5–9), and\
 (3) analyze both REE and REE/kg given their distinct distributional behaviors (Figure @ref(fig:eda1)).
 
 So this leads to using `lme4::lmer()` for a linear mixed-effects regression framework to characterize the effects of obesity, ventilator use, and clinical setting on postoperative metabolic demand. To assess the importance of individual predictors, nested model comparisons were conducted using Kenward–Roger F-tests implemented in `pbkrtest::KRmodcomp()`. Parallel models were fit for both REE and REE per kilogram (REE/kg) to evaluate whether conclusions changed when adjusting for body size.
 
-Including BMI in the mixed-effects models was not appropriate because BMI does not vary within patients and is highly collinear with obesity status, which was already included as a primary predictor. Since the random intercept captures between-patient differences, adding BMI would offer no additional information and would introduce multicollinearity, making parameter estimates unstable and difficult to interpret. Therefore, excluding BMI does not weaken the analysis and is consistent with both the study objectives and best practices for mixed-model specification.
+Including BMI in the mixed-effects models was not appropriate because it does not vary within patients and is highly collinear with obesity status. Since the random intercept already captures between-patient differences, adding BMI would provide no additional information while introducing multicollinearity and unstable estimates.
 
-# Model Evaluation
+I also evaluated whether ICU/SDU location should be retained in the final models. Although clinical location initially appeared to be a plausible predictor of postoperative metabolic demand, it was highly correlated with ventilator use, as most ventilated patients were in the ICU. This collinearity inflated standard errors and reduced Kenward–Roger degrees of freedom. Nested model comparisons confirmed that ICU/SDU did not significantly improve model fit for either REE (F = 0.31, p = 0.58) or REE/kg (F = 0.97, p = 0.34), and its coefficient was consistently small and non-significant across specifications. Given the limited sample size and lack of independent explanatory value, retaining ICU/SDU risked overfitting without contributing meaningful interpretability. Accordingly, ICU/SDU was removed from both final models, allowing obesity and ventilator status to be estimated more reliably.
 
-A comprehensive set of diagnostic checks indicated that both mixed-effects models were appropriately specified. Residuals vs. fitted plots for REE and REE/kg showed centered residuals with no major systematic patterns, aside from mild heteroskedasticity at higher fitted values (Figures \@ref(fig:mod5), \@ref(fig:mod14)). Normal Q–Q plots revealed approximate residual normality with expected tail deviations given the small sample size (Figures \@ref(fig:mod6), \@ref(fig:mod15)). Q–Q plots of the patient-level random intercepts (Figures \@ref(fig:mod7), \@ref(fig:mod16)) further confirmed that the random effects were reasonably normally distributed, supporting the random-intercept structure.
-
-Model fit statistics were reported for the full REE and REE/kg models. For REE, the marginal R² (0.456) indicated that fixed effects explained \~46% of the variance, while the conditional R² (0.544) showed that patient-level random intercepts increased explained variance to 54% (Table \@ref(tab:mod18)). The adjusted ICC (0.163) suggested modest but meaningful between-patient variability. In contrast, the REE/kg model exhibited much lower marginal and conditional R² values and a very small ICC (Table \@ref(tab:mod19)). This relatively low ICC is expected in metabolic data, where REE varies markedly over short time intervals due to clinical and physiological dynamics. These differences indicate that while total REE varies systematically across patients, REE/kg is dominated by within-patient fluctuations.
-
-A few high REE observations (\>2400 kcal/day) increased random-effect variance but were not influential outliers. Mild heteroskedasticity and slight non-normality were expected given the limited sample size and did not threaten model validity. The strongest structural limitation was the temporal confounding between clinical variables and measurement order, as most “ICU” and “Ventilator” observations occurred early in recovery. However, this reflects the study design rather than data anomalies, and the mixed-effects framework handled this imbalance reasonably well.
-
-To evaluate whether clinical effects varied across subgroups, I tested several interactions. Both the Obese x Ventilator and Obese x ICU/SDU interactions improved AIC substantially ($\Delta$AIC = –13.4 and –11.2), whereas Ventilator x ICU/SDU did not ($\Delta$AIC = 0) (Table @ref(tab:mod20)) . However, Kenward–Roger tests provided only marginal evidence for the strongest interaction (Obese x Ventilator: F = 3.10, p = 0.089), and the sample was too small to support the full interaction model despite its low AIC (Table @ref(tab:mod20)) . Overall, the AIC results suggest possible interactions, but the KR tests indicate insufficient statistical support. Therefore, the final models retained only the main effects of obesity, ventilator status, and location:
+To evaluate whether clinical effects varied across subgroups, I tested several interactions. Both the Obese x Ventilator and Obese x ICU/SDU interactions improved AIC substantially ($\Delta$AIC = –13.4 and –11.2), whereas Ventilator x ICU/SDU did not ($\Delta$AIC = 0) (Table @ref(tab:mod17)) . However, Kenward–Roger tests provided only marginal evidence for the strongest interaction (Obese x Ventilator: F = 3.10, p = 0.089), and the sample was too small to support the full interaction model despite its low AIC (Table @ref(tab:mod17)) . Overall, the AIC results suggest possible interactions, but the KR tests indicate insufficient statistical support. Therefore, the final models retained only the main effects of obesity and ventilator status:
 
 $$
 \text{REE}_{ij}
@@ -47,7 +41,6 @@ $$
 \beta_0
 + \beta_{\text{Obese}} \, \text{Obese}_{ij}
 + \beta_{\text{Vent}} \, \text{Vent}_{ij}
-+ \beta_{\text{Loc}} \, \text{ICU/SDU}_{ij}
 + b_{0i}
 + \varepsilon_{ij},
 $$
@@ -63,7 +56,6 @@ $$
 \beta_0
 + \beta_{\text{Obese}} \, \text{Obese}_{ij}
 + \beta_{\text{Vent}} \, \text{Vent}_{ij}
-+ \beta_{\text{Loc}} \, \text{ICU/SDU}_{ij}
 + b_{0i}
 + \varepsilon_{ij},
 $$
@@ -73,17 +65,27 @@ b_{0i} \sim N(0, \sigma_b^2), \qquad
 \varepsilon_{ij} \sim N(0, \sigma^2).
 $$
 
+# Model Evaluation
+
+A comprehensive set of diagnostic checks indicated that both mixed-effects models were appropriately specified. Residuals vs. fitted plots for REE and REE/kg showed centered residuals with no major systematic patterns, aside from mild heteroskedasticity at higher fitted values (Figures \@ref(fig:mod4), \@ref(fig:mod11)). Normal Q–Q plots revealed approximate residual normality with expected tail deviations given the small sample size (Figures \@ref(fig:mod5), \@ref(fig:mod12)). Q–Q plots of the patient-level random intercepts (Figures \@ref(fig:mod6), \@ref(fig:mod13)) further confirmed that the random effects were reasonably normally distributed, supporting the random-intercept structure.
+
+Model fit statistics were summarized for the full REE and REE/kg mixed models. For the REE model, the marginal R² was 0.459, indicating that fixed effects explained about 46% of the variation in REE, while the conditional R² increased to 0.551 after accounting for patient-level random intercepts (Table \@ref(tab:mod15)). The adjusted ICC (0.171) showed that \~17% of REE variability was attributable to stable between-patient differences. In contrast, the REE/kg model had a much lower marginal R² (0.169), demonstrating limited explanatory power from fixed effects. However, its conditional R² rose to 0.565, and the adjusted ICC was substantially higher (0.476; Table \@ref(tab:mod16)), indicating strong patient-level clustering in REE/kg. Overall, total REE appears more driven by measured clinical factors, whereas REE/kg reflects larger inherent differences across individuals.
+
+A few high REE observations (\>2400 kcal/day) increased random-effect variance but were not influential outliers. Mild heteroskedasticity and slight non-normality were expected given the limited sample size and did not threaten model validity. The strongest structural limitation was the temporal confounding between clinical variables and measurement order, as most “ICU” and “Ventilator” observations occurred early in recovery. However, this reflects the study design rather than data anomalies, and the mixed-effects framework handled this imbalance reasonably well.
+
 # Model results
 
-The mixed-effects model for REE revealed that obesity status and ventilator use were meaningful predictors of total metabolic expenditure. Obese patients exhibited approximately 488 kcal/day higher REE than non-obese patients (p = 0.011), consistent with exploratory patterns (Table @ref(tab:mod1)). Ventilated patients showed an estimated 340 kcal/day reduction in REE (p = 0.048), reflecting lower metabolic demand under mechanical ventilation (Table @ref(tab:mod1)). ICU vs SDU location demonstrated no detectable association with REE (p = 0.564) (Table @ref(tab:mod1)). Kenward–Roger tests confirmed these findings: removing obesity significantly worsened model fit (p = 0.009), while removing ventilator status produced borderline evidence of loss of fit (p = 0.065), and removing location had no effect (p = 0.58) (Table @ref(tab:mod2)) (Table @ref(tab:mod3)) (Table @ref(tab:mod4)). When REE was weight-adjusted, the conclusions changed substantially. In the REE/kg model, none of the predictors were significant, and no nested model comparison indicated loss of fit, consistent with the strong overlap seen in the REE per KG by Obesity Status plot (Table @ref(tab:mod10)). Thus, obesity and ventilator status meaningfully affect total energy expenditure but not energy expenditure per kilogram, indicating that differences in REE are driven by body size rather than intrinsic metabolic rate (Table @ref(tab:mod11)) (Table @ref(tab:mod12)) (Table @ref(tab:mod13)).
+The mixed-effects model for REE showed that both obesity status and ventilator use were significant predictors of total metabolic expenditure. Obese patients exhibited approximately 472 kcal/day higher REE than non-obese patients (p = 0.013), consistent with exploratory patterns (Table \@ref(tab:mod1)). Ventilated patients demonstrated an estimated 405 kcal/day reduction in REE (p = 0.002), indicating markedly lower metabolic demand under mechanical ventilation (Table \@ref(tab:mod1)). Kenward–Roger tests confirmed the importance of both predictors: removing obesity significantly worsened model fit (F = 10.91, p = 0.0105), and removing ventilator status also led to a significant loss of fit (F = 9.95, p = 0.0036) (Tables \@ref(tab:mod2)–\@ref(tab:mod3)).
 
-In summary, the modeling objectives were fully achieved. Using a properly diagnosed mixed-effects framework, I characterized how REE depends on obesity, ventilator use, and location. I also demonstrated that these conclusions change when REE is weight-adjusted, and verified through residual, random-effect, and predictive diagnostics that the models fit the data appropriately. The final results show that clinically meaningful differences in metabolic demand arise from obesity and ventilator status, but these differences disappear when adjusting for body weight.
+For REE/kg, the pattern differed. Obesity remained non-significant (p = 0.260), while ventilator use was associated with a modest but statistically significant decrease of 3.94 kcal/kg/day (p = 0.028) (Table \@ref(tab:mod8)). Model comparisons supported the relevance of ventilator status (F = 4.86, p = 0.0352) but provided no evidence that obesity improved fit in the REE/kg model (p = 0.2581) (Tables \@ref(tab:mod9)–\@ref(tab:mod10)). Thus, obesity and ventilator status meaningfully affect total energy expenditure but not energy expenditure per kilogram, indicating that differences in REE are driven by body size rather than intrinsic metabolic rate
+
+Taken together, these results show that clinically meaningful increases in metabolic demand in obese patients arise from higher absolute energy expenditure, not from differences in metabolic rate per kilogram. Ventilator use, however, consistently reduces metabolic requirements across both scales.
 
 # Shortcomings and Conclusion
 
-This analysis is limited by the small sample size (35 observations across 11 patients), which reduces power and leads to unstable degrees of freedom for between-patient predictors such as obesity. ICU/SDU location and ventilator status are both strongly tied to recovery stage, creating temporal confounding the model cannot fully disentangle. Mild heteroskedasticity and slight non-normality in residuals suggest that model assumptions are only approximately met, and a few high-REE patients may disproportionately influence random-effect estimates. Finally, the lack of additional clinical covariates limits the model’s ability to explain variation in metabolic demand. Future work should incorporate larger, more balanced datasets and models that explicitly account for recovery time and more clinical information.
+This analysis is limited by the small sample size (35 observations across 11 patients), which reduces power and leads to unstable degrees of freedom for between-patient predictors such as obesity. ICU/SDU location and ventilator status are strongly tied to recovery stage, creating temporal confounding that the model cannot fully disentangle. Mild heteroskedasticity and slight non-normality in residuals indicate that assumptions are only approximately met, and a few high-REE patients may influence random-effect estimates. The absence of additional clinical covariates also limits the model’s ability to explain variation in metabolic demand. Future work should include larger, more balanced datasets and models that explicitly incorporate recovery time and richer clinical information.
 
-The mixed-effects analysis shows that obesity and ventilator status meaningfully affect total REE, while ICU versus SDU location does not. Obese patients have higher absolute metabolic demand, and ventilated patients exhibit lower REE, but these differences disappear when adjusting for body weight, indicating that metabolic rate per kilogram is stable across groups. Model diagnostics confirmed that linear mixed-effects models were appropriate and adequately captured key features of the data, though a lot remained unexplained within-patient variability. These findings highlight the importance of individualized metabolic monitoring to guide postoperative nutritional support.
+The mixed-effects analysis showed that obesity and ventilator status significantly influence total REE, whereas clinical location (ICU vs. SDU) does not provide additional explanatory value. Obese patients had higher absolute metabolic demand, but this difference disappeared when adjusting for body weight, indicating similar metabolic rate per kilogram across obesity groups. Ventilated patients exhibited lower metabolic demand on both absolute and weight-adjusted scales. These conclusions were consistent with observed-versus-fitted plots, which showed tighter alignment for REE than for REE/kg (Figures \@ref(fig:mod7) and \@ref(fig:mod14)). Model diagnostics supported the use of a mixed-effects framework, though substantial within-patient variability remained, reflecting the dynamic nature of postoperative metabolism. Overall, these findings highlight the importance of individualized metabolic assessment to guide postoperative nutritional support.
 
 \newpage
 
@@ -117,7 +119,7 @@ REE <- REE |>
   )
 ```
 
-```{r label = "eda1", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Distribution of REE across patients", fig.show = 'hold'}
+```{r label = "eda1", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Distribution of REE and REE/kg across patients", fig.show = 'hold'}
 
 p1 <- ggplot(REE, aes(x = REE)) +
   geom_histogram(bins = 20, fill = "#4E79A7", color = "white") +
@@ -188,7 +190,7 @@ ggplot(REE, aes(BMI, REEperKG)) +
 ```{r label = "mod1", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Fixed Effects for REE Mixed Model", fig.show = 'hold'}
 
 model_REE <- lmer(
-  REE ~ Obese + Ventilator + ICUorSDU + (1 | ID),
+  REE ~ Obese + Ventilator + (1 | ID),
   data = REE
 )
 
@@ -199,7 +201,7 @@ tidy(model_REE, effects = "fixed", conf.int = TRUE) %>%
 
 ```{r label = "mod2", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model vs. Model without Obesity", fig.show = 'hold'}
 
-model_REE_noObese <- lmer(REE ~ Ventilator + ICUorSDU + (1|ID), data = REE)
+model_REE_noObese <- lmer(REE ~ Ventilator + (1|ID), data = REE)
 
 kr <- pbkrtest::KRmodcomp(model_REE, model_REE_noObese)
 
@@ -212,7 +214,7 @@ broom::tidy(kr) %>%
 
 ```{r label = "mod3", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model vs. Model without Ventilator", fig.show = 'hold'}
 
-model_REE_noVent <- lmer(REE ~ Obese + ICUorSDU + (1|ID), data = REE)
+model_REE_noVent <- lmer(REE ~ Obese + (1|ID), data = REE)
 kr <- pbkrtest::KRmodcomp(model_REE, model_REE_noVent)
 
 broom::tidy(kr) %>%
@@ -222,44 +224,26 @@ broom::tidy(kr) %>%
   kable_styling(full_width = FALSE)
 ```
 
-```{r label = "mod4", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model vs. Model without ICU/SDU", fig.show = 'hold'}
-
-model_REE_noLoc <- lmer(REE ~ Obese + Ventilator + (1|ID), data = REE)
-kr <- pbkrtest::KRmodcomp(model_REE, model_REE_noLoc)
-
-broom::tidy(kr) %>%
-  kable("latex",
-        digits = 4,
-        caption = "Kenward–Roger Test Comparing Full Model REE vs. Model without ICU/SDU") %>%
-  kable_styling(full_width = FALSE)
-```
-
-```{r label = "mod5", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Residuals vs Fitted Plot for full REE model", fig.show = 'hold'}
+```{r label = "mod4", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Residuals vs Fitted Plot for full REE model", fig.show = 'hold'}
 
 par(mfrow=c(1,2))
-plot(model_REE, which=1)  # residuals vs fitted
+plot(model_REE, which=1, main = "Residuals vs Fitted for REE")  
+
 ```
 
-```{r label = "mod6", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Normal QQ Plot for full REE model", fig.show = 'hold'}
+```{r label = "mod5", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Normal QQ Plot for full REE model", fig.show = 'hold'}
 
 qqnorm(resid(model_REE)); qqline(resid(model_REE))
 par(mfrow=c(1,1))
 ```
 
-```{r label = "mod7", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Random Intercept QQ Plot for full REE model", fig.show = 'hold'}
+```{r label = "mod6", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Random Intercept QQ Plot for full REE model", fig.show = 'hold'}
 
 qqnorm(ranef(model_REE)$ID[,1], main="Random Intercept QQ Plot")
 qqline(ranef(model_REE)$ID[,1])
-
 ```
 
-```{r label = "mod8", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model vs. Model without ICU/SDU", fig.show = 'hold'}
-
-#check_model(model_REE)
-
-```
-
-```{r label = "mod9", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Observed vs Fitted REE by Patient ID", fig.show = 'hold'}
+```{r label = "mod7", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Observed vs Fitted REE by Patient ID", fig.show = 'hold'}
 
 REE$fitted <- fitted(model_REE)
 
@@ -270,22 +254,21 @@ ggplot(REE, aes(x = fitted, y = REE, color = ID)) +
 
 ```
 
-```{r label = "mod10", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Fixed Effects for REE by KG Mixed Model", fig.show = 'hold'}
+```{r label = "mod8", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Fixed Effects for REE by KG Mixed Model", fig.show = 'hold'}
 
 model_REEkg <- lmer(
-  REEperKG ~ Obese + Ventilator + ICUorSDU + (1 | ID),
+  REEperKG ~ Obese + Ventilator  + (1 | ID),
   data = REE
 )
 
 tidy(model_REEkg, effects = "fixed", conf.int = TRUE) %>%
   kable("latex", digits = 3, caption = "Fixed Effects for REE/kg Mixed Model") %>%
   kable_styling(full_width = FALSE)
-
 ```
 
-```{r label = "mod11", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model REEkg vs. Model without Obesity", fig.show = 'hold'}
+```{r label = "mod9", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model REEkg vs. Model without Obesity", fig.show = 'hold'}
 
-model_REEkg_noObese <- lmer(REEperKG ~ Ventilator + ICUorSDU + (1|ID), data = REE)
+model_REEkg_noObese <- lmer(REEperKG ~ Ventilator + (1|ID), data = REE)
 
 kr <- pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noObese)
 
@@ -296,9 +279,9 @@ broom::tidy(kr) %>%
   kable_styling(full_width = FALSE)
 ```
 
-```{r label = "mod12", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model REEkg vs. Model without Ventilator", fig.show = 'hold'}
+```{r label = "mod10", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model REEkg vs. Model without Ventilator", fig.show = 'hold'}
 
-model_REEkg_noVent <- lmer(REEperKG ~ Obese + ICUorSDU + (1|ID), data = REE)
+model_REEkg_noVent <- lmer(REEperKG ~ Obese + (1|ID), data = REE)
 
 kr <- pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noVent)
 
@@ -309,38 +292,25 @@ broom::tidy(kr) %>%
   kable_styling(full_width = FALSE)
 ```
 
-```{r label = "mod13", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "KR Test Full Model REEkg vs. Model without ICU/SDU", fig.show = 'hold'}
-
-model_REEkg_noLoc <- lmer(REEperKG ~ Obese + Ventilator + (1|ID), data = REE)
-
-kr <- pbkrtest::KRmodcomp(model_REEkg, model_REEkg_noLoc)
-
-broom::tidy(kr) %>%
-  kable("latex",
-        digits = 4,
-        caption = "Kenward–Roger Test Comparing Full Model REE/kg vs. Model without ICU/SDU") %>%
-  kable_styling(full_width = FALSE)
-```
-
-```{r label = "mod14", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Residual Plot for REE per KG model", fig.show = 'hold'}
+```{r label = "mod11", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Residual Plot for REE per KG model", fig.show = 'hold'}
 
 par(mfrow=c(1,2))
-plot(model_REEkg, which=1)
+plot(model_REEkg, which=1, main = "Residuals vs Fitted for REE/kg")
 ```
 
-```{r label = "mod15", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "QQ Plot for REE per KG model", fig.show = 'hold'}
+```{r label = "mod12", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "QQ Plot for REE per KG model", fig.show = 'hold'}
 
 qqnorm(resid(model_REEkg)); qqline(resid(model_REEkg))
 par(mfrow=c(1,1))
 ```
 
-```{r label = "mod16", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Random Intercept QQ Plot for REE per KG model", fig.show = 'hold'}
+```{r label = "mod13", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Random Intercept QQ Plot for REE per KG model", fig.show = 'hold'}
 
 qqnorm(ranef(model_REEkg)$ID[,1], main="Random Intercept QQ Plot (REE/kg)")
 qqline(ranef(model_REEkg)$ID[,1])
 ```
 
-```{r label = "mod17", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Observed vs Fitted REE per KG by Patient ID", fig.show = 'hold'}
+```{r label = "mod14", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "Observed vs Fitted REE per KG by Patient ID", fig.show = 'hold'}
 
 REE$fitted_kg <- fitted(model_REEkg)
 
@@ -351,7 +321,7 @@ ggplot(REE, aes(x = fitted_kg, y = REEperKG, color = ID)) +
 
 ```
 
-```{r label = "mod18", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "R^2 & ICC values for the full REE model", fig.show = 'hold'}
+```{r label = "mod15", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "R^2 & ICC values for the full REE model", fig.show = 'hold'}
 
 r2_vals  <- performance::r2(model_REE)
 icc_vals <- performance::icc(model_REE)
@@ -372,7 +342,7 @@ kable(fit_stats,
   kable_styling(latex_options = "hold_position")
 ```
 
-```{r label = "mod19", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "ICC values for the full REE/kg model", fig.show = 'hold'}
+```{r label = "mod16", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "ICC values for the full REE/kg model", fig.show = 'hold'}
 
 r2_vals  <- performance::r2(model_REEkg)
 icc_vals <- performance::icc(model_REEkg)
@@ -394,7 +364,7 @@ kable(fit_stats,
 
 ```
 
-```{r label = "mod20", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "AIC Values with Different Interactions Terms Compared to the the Original Model", fig.show = 'hold'}
+```{r label = "mod17", echo = FALSE, warning = FALSE, message = FALSE, fig.cap = "AIC Values with Different Interactions Terms Compared to the the Original Model", fig.show = 'hold'}
 
 model_REE_int1 <- lmer(
   REE ~ Obese * Ventilator + ICUorSDU + (1 | ID),
